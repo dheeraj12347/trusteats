@@ -1,0 +1,136 @@
+.te-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.te-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.te-banner {
+  padding: 0.7rem 1rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #22c55e1a, #22c55e33);
+  border: 1px solid #22c55e55;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
+.te-orders-grid,
+.te-restaurants-grid,
+.te-menu-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .te-orders-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .te-restaurants-grid,
+  .te-menu-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.te-order-card,
+.te-restaurant-card,
+.te-menu-card {
+  border-radius: 1rem;
+  padding: 0.9rem;
+  background: radial-gradient(circle at top left, #0f172a, #020617);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transform: translateY(0);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.te-order-card:hover,
+.te-restaurant-card:hover,
+.te-menu-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+.te-order-header > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.te-order-id {
+  font-weight: 500;
+}
+
+.te-order-status {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.te-order-time {
+  margin-left: auto;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.te-order-restaurant {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.te-order-items {
+  margin: 0.2rem 0;
+  padding-left: 1rem;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.te-order-footer {
+  margin-top: 0.4rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.te-primary-btn,
+.te-secondary-btn {
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.te-primary-btn {
+  background: linear-gradient(135deg, #0ea5e9, #22c55e);
+  color: #0b1120;
+  font-weight: 600;
+}
+
+.te-secondary-btn {
+  background: transparent;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+}
+
+.te-primary-btn:hover,
+.te-secondary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
+}
+
+.te-empty {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
