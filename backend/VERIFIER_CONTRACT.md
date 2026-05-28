@@ -36,6 +36,16 @@ A canonical version 1 payload looks like this:
   "ordered_item": "burger",
   "complaint_type": "FOREIGN_OBJECT",
   "reasoning": "Evidence strongly supports the complaint. Detected insect/bug.",
+  "food_detection_available": true,
+  "food_detection_mode": "vit-food101",
+  "food_detector_name": "nateraw/food",
+  "predicted_food_labels": ["burger", "cheeseburger"],
+  "predicted_top_label": "burger",
+  "predicted_top_confidence": 0.95,
+  "expected_food_labels": ["burger"],
+  "food_match_score": 1.0,
+  "food_match_category": "plausible_match",
+  "food_match_reasoning": "Verification passed: Plausible food match detected (burger).",
   "contract_version": 1
 }
 ```
@@ -63,7 +73,7 @@ A canonical version 1 payload looks like this:
 1. **`issue_support_level`** (`string`)
    - **Allowed values:** `issue_supported_strong`, `issue_supported_weak`, `issue_not_visible`, `issue_uncertain`, `fraud_suspected`
    - **Default fallback:** `issue_uncertain` (or `fraud_suspected` for hard rejects).
-   - **Description:** CLIP anomaly check support classification level indicating how strongly the evidence visualizes the reported issue.
+   - **Description:** CLIP anomaly check support classification level indicating how strongly the evidence visualizes the reported issue. (Note: For `MISSING_ITEM` complaints, if a plausible food match is detected, the Node.js backend policy downgrades `issue_supported_strong` to `issue_supported_weak` to prevent incorrect high-priority review escalation).
 
 2. **`confidence`** (`number` between `0.0` and `1.0`)
    - **Description:** Overall confidence score of the classification.
@@ -93,6 +103,44 @@ A canonical version 1 payload looks like this:
 
 9. **`complaint_type`** (`string`)
    - **Description:** The complaint reason category.
+
+10. **`foreign_object_detection_available`** (`boolean`)
+    - **Description:** True if the zero-shot object detection model (OWL-ViT) was successfully loaded and executed.
+11. **`foreign_object_detection_mode`** (`string`)
+    - **Description:** Mode of detection (`'owlvit'`, `'fallback'`, or `'none'`).
+12. **`foreign_object_detector_name`** (`string`)
+    - **Description:** Name of the model/pipeline used (`'google/owlvit-base-patch32'`, `'clip-fallback'`, or `'none'`).
+13. **`foreign_object_detected`** (`boolean`)
+    - **Description:** True if a foreign object was detected in the images by the active object detector.
+14. **`foreign_object_labels`** (`array` of `string`)
+    - **Description:** Labels of detected contaminants (e.g. `['cockroach']`, `['plastic']`).
+15. **`foreign_object_confidence`** (`number`)
+    - **Description:** Max score/confidence of the detected object(s).
+16. **`foreign_object_boxes`** (`array` of `array` of `number`)
+    - **Description:** Bounding boxes of detected objects in the format `[x_min, y_min, x_max, y_max]`.
+17. **`foreign_object_reasoning`** (`string`)
+    - **Description:** Text summary/explanation of the object detection outcome.
+18. **`food_detection_available`** (`boolean`)
+    - **Description:** True if the food classifier model (`nateraw/food`) was successfully loaded and executed.
+19. **`food_detection_mode`** (`string`)
+    - **Description:** Mode of detection (`'vit-food101'`, `'fallback'`, or `'none'`).
+20. **`food_detector_name`** (`string`)
+    - **Description:** Name of the model/pipeline used (`'nateraw/food'`, `'vit-fallback'`, or `'none'`).
+21. **`predicted_food_labels`** (`array` of `string`)
+    - **Description:** Unique predicted food labels across the evaluated camera frames (up to top-3 predictions per frame).
+22. **`predicted_top_label`** (`string`)
+    - **Description:** The top-1 predicted label of the first frame.
+23. **`predicted_top_confidence`** (`number`)
+    - **Description:** Confidence score of the top-1 predicted label of the first frame.
+24. **`expected_food_labels`** (`array` of `string`)
+    - **Description:** Parsed and sanitized expected labels passed to the verifier (extracted from the ordered menu item).
+25. **`food_match_score`** (`number` between `0.0` and `1.0`)
+    - **Description:** Score calculated as the fraction of images that match the expected items or their aliases (e.g., `2/3` or `1.0`).
+26. **`food_match_category`** (`string`)
+    - **Allowed values:** `'plausible_match'`, `'mismatch'`, `'non_food'`, `'unknown'`
+    - **Description:** The food verification outcome indicating if the food matches expectations, is a mismatch, is not food at all, or is unknown/unclassifiable.
+27. **`food_match_reasoning`** (`string`)
+    - **Description:** Explanatory text of the food matching results.
 
 ---
 

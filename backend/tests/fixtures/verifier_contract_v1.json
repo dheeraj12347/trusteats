@@ -19,5 +19,20 @@
   "ordered_item": "burger",
   "complaint_type": "FOREIGN_OBJECT",
   "reasoning": "Evidence strongly supports the complaint. Detected insect/bug.",
+  "food_detection_available": true,
+  "food_detection_mode": "vit-food101",
+  "food_detector_name": "nateraw/food",
+  "predicted_food_labels": [
+    "burger",
+    "cheeseburger"
+  ],
+  "predicted_top_label": "burger",
+  "predicted_top_confidence": 0.95,
+  "expected_food_labels": [
+    "burger"
+  ],
+  "food_match_score": 1.0,
+  "food_match_category": "plausible_match",
+  "food_match_reasoning": "Verification passed: Plausible food match detected (burger).",
   "contract_version": 1
 }

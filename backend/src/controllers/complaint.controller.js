@@ -131,7 +131,8 @@ const ComplaintController = {
       // Evaluate the complaint decision (including status, warning state, attempts, etc.)
       const decisionResult = ComplaintDecisionService.evaluateComplaint({
         verifierResult: verification,
-        existingComplaint: isRetry ? existing : null
+        existingComplaint: isRetry ? existing : null,
+        complaintType: type
       });
 
       let finalStatus = decisionResult.status;
@@ -238,8 +239,7 @@ const ComplaintController = {
       const food_match_result = verification.food_match_result || 
         (verification.decision === 'FOOD_MISMATCH' ? 'food_mismatch' : (verification.decision === 'FOOD_MATCH_PLAUSIBLE' ? 'food_match_plausible' : 'uncertain'));
       const detected_objects = verification.detected_objects || [];
-      const issue_support_level = verification.issue_support_level || 
-        ((['REJECT', 'REJECT_FACE_PRESENT', 'REJECT_NON_FOOD'].includes(verification.decision)) ? 'fraud_suspected' : 'issue_uncertain');
+      const issue_support_level = decisionResult.issue_support_level;
       const reasoning = verification.reasoning || verification.reason || '';
       const confidence = verification.confidence ?? 0.0;
 

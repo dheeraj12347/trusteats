@@ -200,6 +200,124 @@ def analyze_face_signal(paths):
     return result
 
 
+def analyze_food_image(paths, expected_labels):
+    res = {
+        "food_detection_available": False,
+        "food_detection_mode": "none",
+        "food_detector_name": "none",
+        "predicted_food_labels": [],
+        "predicted_top_label": "unknown",
+        "predicted_top_confidence": 0.0,
+        "expected_food_labels": [],
+        "food_match_score": 0.0,
+        "food_match_category": "unknown",
+        "food_match_reasoning": "Food detection not performed."
+    }
+
+    try:
+        from transformers import pipeline
+        from PIL import Image
+
+        # Attempt to load vit-food101 classifier
+        classifier = pipeline("image-classification", model="nateraw/food")
+
+        res["food_detection_available"] = True
+        res["food_detection_mode"] = "vit-food101"
+        res["food_detector_name"] = "nateraw/food"
+
+        expected_list = [x.strip().lower() for x in expected_labels.split(",") if x.strip()]
+        res["expected_food_labels"] = expected_list
+
+        # Common aliases & category mapping
+        aliases = {
+            "pizza": ["pizza", "margherita", "cheese pizza", "pepperoni pizza", "garlic pizza"],
+            "burger": ["burger", "cheeseburger", "hamburger", "chicken burger", "veg burger"],
+            "noodles": ["noodles", "hakka noodles", "chow mein", "ramen", "pasta", "spaghetti"]
+        }
+
+        expanded_expected_list = list(expected_list)
+        for exp in expected_list:
+            for k, val_list in aliases.items():
+                if exp in val_list:
+                    expanded_expected_list.extend(val_list)
+                elif exp == k:
+                    expanded_expected_list.extend(val_list)
+
+        expanded_expected_list = list(set([x.replace("_", "").replace(" ", "").lower() for x in expanded_expected_list]))
+
+        frames_results = []
+        for p in paths:
+            try:
+                img = Image.open(p).convert("RGB")
+                predictions = classifier(img)
+                frames_results.append(predictions)
+            except Exception:
+                continue
+
+        if len(frames_results) < 3:
+            res["food_match_category"] = "unknown"
+            res["food_match_reasoning"] = "Failed to classify all 3 frames."
+            return res
+
+        top_pred_1 = frames_results[0][0]
+        res["predicted_top_label"] = top_pred_1["label"]
+        res["predicted_top_confidence"] = float(top_pred_1["score"])
+
+        # Unique predicted labels across frames
+        unique_labels = []
+        for preds in frames_results:
+            for p in preds[:3]:
+                unique_labels.append(p["label"])
+        res["predicted_food_labels"] = list(set(unique_labels))
+
+        # Check if all low confidence (non-food heuristic)
+        all_low_conf = True
+        for preds in frames_results:
+            if preds and preds[0]["score"] >= 0.12:
+                all_low_conf = False
+                break
+
+        if all_low_conf:
+            res["food_match_category"] = "non_food"
+            res["food_match_reasoning"] = "Rejected: Captured evidence does not appear to contain recognizable food."
+            return res
+
+        if not expected_list:
+            res["food_match_category"] = "unknown"
+            res["food_match_reasoning"] = f"Verification uncertain: No food mapping found for this menu item. Detected {res['predicted_top_label']}."
+            return res
+
+        matched_frames_count = 0
+        for preds in frames_results:
+            top_3_labels = [p["label"].lower().replace("_", "").replace(" ", "") for p in preds[:3]]
+            has_match = False
+            for exp in expanded_expected_list:
+                if exp in top_3_labels:
+                    has_match = True
+                    break
+            if has_match:
+                matched_frames_count += 1
+
+        score = float(matched_frames_count) / len(paths)
+        res["food_match_score"] = score
+
+        if matched_frames_count >= 2:
+            res["food_match_category"] = "plausible_match"
+            res["food_match_reasoning"] = f"Verification passed: Plausible food match detected ({res['predicted_top_label']})."
+        else:
+            res["food_match_category"] = "mismatch"
+            res["food_match_reasoning"] = f"Warning: Captured food ({res['predicted_top_label']}) does not match the ordered item."
+
+    except Exception as e:
+        res["food_detection_available"] = False
+        res["food_detection_mode"] = "fallback"
+        res["food_detector_name"] = "vit-fallback"
+        res["food_match_category"] = "unknown"
+        res["food_match_reasoning"] = f"Food detector unavailable (fallback mode). Error: {str(e)}"
+
+    return res
+
+
 def verify_images_stage2(res, img1, img2, img3, expected_labels):
     try:
         from PIL import Image
@@ -223,85 +341,34 @@ def verify_images_stage2(res, img1, img2, img3, expected_labels):
         res["confidence"] = 1.0
         return res
 
-    try:
-        classifier = pipeline("image-classification", model="nateraw/food")
-    except Exception as e:
-        res["decision"] = "UNCERTAIN"
-        res["reason"] = f"Food classification model could not be loaded: {str(e)}"
-        res["confidence"] = 0.5
-        return res
+    # Call the new food image analysis helper
+    food_res = analyze_food_image(paths, expected_labels)
+    res.update(food_res)
 
-    expected_list = [x.strip().lower() for x in expected_labels.split(",") if x.strip()]
+    # Legacy fields mapping
+    res["predicted_label"] = food_res["predicted_top_label"]
+    res["prediction_confidence"] = food_res["predicted_top_confidence"]
+    res["confidence"] = food_res["predicted_top_confidence"]
 
-    frames_results = []
-    for p in paths:
-        try:
-            img = Image.open(p).convert("RGB")
-            predictions = classifier(img)
-            frames_results.append(predictions)
-        except Exception as e:
-            res["decision"] = "UNCERTAIN"
-            res["reason"] = f"Error classifying image {os.path.basename(p)}: {str(e)}"
-            res["confidence"] = 0.5
-            return res
+    cat = food_res["food_match_category"]
+    reason = food_res["food_match_reasoning"]
 
-    if len(frames_results) < 3:
-        res["decision"] = "UNCERTAIN"
-        res["reason"] = "Failed to classify all 3 frames."
-        res["confidence"] = 0.5
-        return res
-
-    top_pred_1 = frames_results[0][0]
-    predicted_label = top_pred_1["label"]
-    prediction_confidence = float(top_pred_1["score"])
-
-    all_low_conf = True
-    for preds in frames_results:
-        if preds and preds[0]["score"] >= 0.12:
-            all_low_conf = False
-            break
-
-    if all_low_conf:
+    if cat == "non_food":
         res["decision"] = "REJECT_NON_FOOD"
-        res["reason"] = "Rejected: Captured evidence does not appear to contain recognizable food."
-        res["predicted_label"] = predicted_label
-        res["prediction_confidence"] = prediction_confidence
-        res["confidence"] = prediction_confidence
-        return res
-
-    if not expected_list:
-        res["decision"] = "UNCERTAIN"
-        res["reason"] = f"Verification uncertain: No food mapping found for this menu item. Detected {predicted_label}."
-        res["predicted_label"] = predicted_label
-        res["prediction_confidence"] = prediction_confidence
-        res["confidence"] = prediction_confidence
-        return res
-
-    matched_frames_count = 0
-    for preds in frames_results:
-        top_3_labels = [p["label"].lower().replace("_", "").replace(" ", "") for p in preds[:3]]
-        has_match = False
-        for exp in expected_list:
-            sanitized_exp = exp.lower().replace("_", "").replace(" ", "")
-            if sanitized_exp in top_3_labels:
-                has_match = True
-                break
-        if has_match:
-            matched_frames_count += 1
-
-    if matched_frames_count >= 2:
+        res["reason"] = reason
+    elif cat == "plausible_match":
         res["decision"] = "FOOD_MATCH_PLAUSIBLE"
-        res["reason"] = f"Verification passed: Plausible food match detected ({predicted_label})."
-    else:
+        res["reason"] = reason
+    elif cat == "mismatch":
         res["decision"] = "FOOD_MISMATCH"
-        res["reason"] = f"Warning: Captured food ({predicted_label}) does not match the ordered item."
+        res["reason"] = reason
+    else:
+        res["decision"] = "UNCERTAIN"
+        res["reason"] = reason
 
     if res.get("weak_face_detected"):
         res["reason"] += " Note: weak face-like pattern detected, but not strong enough for automatic face rejection."
 
-    res["predicted_label"] = predicted_label
-    res["prediction_confidence"] = prediction_confidence
-    res["confidence"] = prediction_confidence
     return res
 
 
@@ -438,6 +505,75 @@ def verify_complaint_evidence(img1, img2, img3, complaint_type, description):
     }
 
 
+def detect_foreign_objects(paths, complaint_type, description):
+    res = {
+        "foreign_object_detection_available": False,
+        "foreign_object_detection_mode": "none",
+        "foreign_object_detector_name": "none",
+        "foreign_object_detected": False,
+        "foreign_object_labels": [],
+        "foreign_object_confidence": 0.0,
+        "foreign_object_boxes": [],
+        "foreign_object_reasoning": "Foreign object detection not run for this complaint type."
+    }
+
+    if complaint_type != "FOREIGN_OBJECT":
+        return res
+
+    candidate_labels = ["cockroach", "insect", "bug", "hair", "plastic", "glass", "metal", "worm", "foreign object"]
+
+    try:
+        from transformers import pipeline
+        from PIL import Image
+
+        # Attempt to load zero-shot object detection with google/owlvit-base-patch32.
+        # If this is run offline or fails to download, it will raise an Exception and fall back gracefully.
+        detector = pipeline("zero-shot-object-detection", model="google/owlvit-base-patch32")
+
+        res["foreign_object_detection_available"] = True
+        res["foreign_object_detection_mode"] = "owlvit"
+        res["foreign_object_detector_name"] = "google/owlvit-base-patch32"
+
+        all_detected_labels = []
+        all_detected_boxes = []
+        max_confidence = 0.0
+
+        for p in paths:
+            try:
+                img = Image.open(p).convert("RGB")
+                predictions = detector(img, candidate_labels=candidate_labels)
+                for pred in predictions:
+                    score = float(pred["score"])
+                    label = pred["label"]
+                    box = pred["box"]
+                    if score >= 0.12:
+                        all_detected_labels.append(label)
+                        all_detected_boxes.append([box["xmin"], box["ymin"], box["xmax"], box["ymax"]])
+                        if score > max_confidence:
+                            max_confidence = score
+            except Exception:
+                continue
+
+        if len(all_detected_labels) > 0:
+            res["foreign_object_detected"] = True
+            res["foreign_object_labels"] = list(set(all_detected_labels))
+            res["foreign_object_confidence"] = max_confidence
+            res["foreign_object_boxes"] = all_detected_boxes
+            res["foreign_object_reasoning"] = f"Foreign object(s) detected: {', '.join(res['foreign_object_labels'])}."
+        else:
+            res["foreign_object_detected"] = False
+            res["foreign_object_reasoning"] = "No foreign object detected in submitted evidence."
+
+    except Exception as e:
+        res["foreign_object_detection_available"] = False
+        res["foreign_object_detection_mode"] = "fallback"
+        res["foreign_object_detector_name"] = "clip-fallback"
+        res["foreign_object_detected"] = False
+        res["foreign_object_reasoning"] = f"Foreign object detector unavailable (fallback mode). Error loading detector: {str(e)}"
+
+    return res
+
+
 if __name__ == "__main__":
     control_path = os.path.join(os.path.dirname(__file__), "audit_control.json")
     if os.path.exists(control_path):
@@ -471,6 +607,10 @@ if __name__ == "__main__":
                 res["reason"] = f"{res.get('reason', '')} | Evidence Check: {evidence_res['reasoning']}"
                 res["confidence"] = evidence_res["confidence"]
 
+                # Run foreign object detection
+                fo_res = detect_foreign_objects([img1, img2, img3], complaint_type, description)
+                res.update(fo_res)
+
         res["ordered_item"] = expected_labels
         res["complaint_type"] = complaint_type
         res["food_match_result"] = (
@@ -491,6 +631,28 @@ if __name__ == "__main__":
 
         if "reasoning" not in res:
             res["reasoning"] = res.get("reason", "")
+
+        if "foreign_object_detection_available" not in res:
+            res["foreign_object_detection_available"] = False
+            res["foreign_object_detection_mode"] = "none"
+            res["foreign_object_detector_name"] = "none"
+            res["foreign_object_detected"] = False
+            res["foreign_object_labels"] = []
+            res["foreign_object_confidence"] = 0.0
+            res["foreign_object_boxes"] = []
+            res["foreign_object_reasoning"] = "Foreign object detection not run."
+
+        if "food_detection_available" not in res:
+            res["food_detection_available"] = False
+            res["food_detection_mode"] = "none"
+            res["food_detector_name"] = "none"
+            res["predicted_food_labels"] = []
+            res["predicted_top_label"] = "unknown"
+            res["predicted_top_confidence"] = 0.0
+            res["expected_food_labels"] = []
+            res["food_match_score"] = 0.0
+            res["food_match_category"] = "unknown"
+            res["food_match_reasoning"] = "Food detection not run."
 
         res["contract_version"] = 1
 
@@ -516,6 +678,24 @@ if __name__ == "__main__":
             "detected_objects": [],
             "issue_support_level": "fraud_suspected",
             "reasoning": "Missing required command line arguments.",
+            "foreign_object_detection_available": False,
+            "foreign_object_detection_mode": "none",
+            "foreign_object_detector_name": "none",
+            "foreign_object_detected": False,
+            "foreign_object_labels": [],
+            "foreign_object_confidence": 0.0,
+            "foreign_object_boxes": [],
+            "foreign_object_reasoning": "Missing required command line arguments.",
+            "food_detection_available": False,
+            "food_detection_mode": "none",
+            "food_detector_name": "none",
+            "predicted_food_labels": [],
+            "predicted_top_label": "unknown",
+            "predicted_top_confidence": 0.0,
+            "expected_food_labels": [],
+            "food_match_score": 0.0,
+            "food_match_category": "unknown",
+            "food_match_reasoning": "Missing required command line arguments.",
             "contract_version": 1
         }))
         

@@ -254,7 +254,15 @@ describe('Complaint Submission Integration Tests', () => {
       food_match_result: 'food_match_plausible',
       issue_support_level: 'issue_supported_strong',
       detected_objects: ['insect/bug'],
-      reasoning: 'Evidence strongly supports the complaint. Detected insect/bug.'
+      reasoning: 'Evidence strongly supports the complaint. Detected insect/bug.',
+      foreign_object_detection_available: true,
+      foreign_object_detection_mode: 'owlvit',
+      foreign_object_detector_name: 'google/owlvit-base-patch32',
+      foreign_object_detected: true,
+      foreign_object_labels: ['bug', 'insect'],
+      foreign_object_confidence: 0.95,
+      foreign_object_boxes: [[10, 20, 30, 40]],
+      foreign_object_reasoning: 'Detected bug/insect.'
     };
     mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
     mockUser = { id: 1, trust_score: 85 };
@@ -673,5 +681,500 @@ describe('Complaint Submission Integration Tests', () => {
     assert.strictEqual(res.status, 400);
     assert.match(res.body.message, /Only images.*are allowed/);
   });
+
+  test('s) MISSING_ITEM + plausible food match + strong support -> downgraded to normal priority review', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'FOOD_MATCH_PLAUSIBLE',
+      reason: 'Verification passed: Plausible food match detected (pizza).',
+      face_detected: false,
+      confidence: 0.95,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'pizza',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_match_plausible',
+      issue_support_level: 'issue_supported_strong',
+      detected_objects: [],
+      reasoning: 'Evidence strongly supports the complaint.'
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'MISSING_ITEM')
+      .field('description', 'pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    // Verify it is NOT high-priority review
+    assert.strictEqual(res.body.issue_support_level, 'issue_supported_weak');
+    assert.ok(!res.body.decision_reason.includes('high-priority'));
+    assert.ok(res.body.decision_reason.includes('Sent for review') || res.body.decision_reason.includes('Sent for manual review'));
+    assert.strictEqual(lastCreatedComplaintData.warning_state, null);
+  });
+
+  test('t) MISSING_ITEM + suspicious image (replay screen) -> fraud reject', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'REJECT',
+      reason: 'Screen replay or suspicious filename detected in evidence.',
+      face_detected: false,
+      confidence: 0.0,
+      suspicious_capture: true,
+      is_ai_generated: false,
+      food_match_result: 'uncertain',
+      issue_support_level: 'fraud_suspected',
+      detected_objects: []
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'MISSING_ITEM')
+      .field('description', 'pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'AUTO_REJECTED');
+    assert.strictEqual(res.body.issue_support_level, 'fraud_suspected');
+  });
+
+  test('u) FOREIGN_OBJECT + detector-positive (OWL-ViT) -> high-priority review escalation', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'FOOD_MATCH_PLAUSIBLE',
+      reason: 'Plausible food match.',
+      face_detected: false,
+      confidence: 0.95,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'pizza',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_match_plausible',
+      issue_support_level: 'issue_supported_strong',
+      detected_objects: ['insect/bug'],
+      reasoning: 'Evidence strongly supports the complaint.',
+      foreign_object_detection_available: true,
+      foreign_object_detection_mode: 'owlvit',
+      foreign_object_detector_name: 'google/owlvit-base-patch32',
+      foreign_object_detected: true,
+      foreign_object_labels: ['bug', 'insect'],
+      foreign_object_confidence: 0.85,
+      foreign_object_boxes: [[10, 20, 30, 40]],
+      foreign_object_reasoning: 'Detected bug/insect.'
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'FOREIGN_OBJECT')
+      .field('description', 'insect in pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.issue_support_level, 'issue_supported_strong');
+    assert.ok(res.body.decision_reason.includes('high-priority'));
+    assert.ok(res.body.decision_reason.includes('Detected: bug, insect'));
+  });
+
+  test('v) FOREIGN_OBJECT + detector-negative (OWL-ViT) -> normal review with no foreign object detected wording', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'FOOD_MATCH_PLAUSIBLE',
+      reason: 'Plausible food match.',
+      face_detected: false,
+      confidence: 0.95,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'pizza',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_match_plausible',
+      issue_support_level: 'issue_supported_strong',
+      detected_objects: [],
+      reasoning: 'No foreign objects found.',
+      foreign_object_detection_available: true,
+      foreign_object_detection_mode: 'owlvit',
+      foreign_object_detector_name: 'google/owlvit-base-patch32',
+      foreign_object_detected: false,
+      foreign_object_labels: [],
+      foreign_object_confidence: 0.0,
+      foreign_object_boxes: [],
+      foreign_object_reasoning: 'No contaminants detected.'
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'FOREIGN_OBJECT')
+      .field('description', 'insect in pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.issue_support_level, 'issue_not_visible');
+    assert.ok(!res.body.decision_reason.includes('high-priority'));
+    assert.ok(res.body.decision_reason.includes('no foreign object detected in submitted evidence'));
+  });
+
+  test('w) FOREIGN_OBJECT + fallback mode (detector unavailable) -> downgraded to normal review with fallback reasoning', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'FOOD_MATCH_PLAUSIBLE',
+      reason: 'Plausible food match.',
+      face_detected: false,
+      confidence: 0.95,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'pizza',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_match_plausible',
+      issue_support_level: 'issue_supported_strong',
+      detected_objects: ['insect/bug'],
+      reasoning: 'Evidence strongly supports the complaint.',
+      foreign_object_detection_available: false,
+      foreign_object_detection_mode: 'fallback',
+      foreign_object_detector_name: 'clip-fallback',
+      foreign_object_detected: false,
+      foreign_object_labels: [],
+      foreign_object_confidence: 0.0,
+      foreign_object_boxes: [],
+      foreign_object_reasoning: 'Detector unavailable.'
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'FOREIGN_OBJECT')
+      .field('description', 'insect in pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.issue_support_level, 'issue_supported_weak');
+    assert.ok(!res.body.decision_reason.includes('high-priority'));
+    assert.ok(!res.body.decision_reason.includes('no foreign object detected'));
+    assert.ok(res.body.decision_reason.includes('Verification passed: Plausible food match with weak/moderate evidence'));
+  });
+
+  test('x) Expected pizza + pizza image -> plausible_match (PENDING, normal review) under Phase 2 food contract', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'FOOD_MATCH_PLAUSIBLE',
+      reason: 'Verification passed: Plausible food match detected (pizza).',
+      face_detected: false,
+      confidence: 0.95,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'pizza',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_match_plausible',
+      issue_support_level: 'issue_uncertain',
+      detected_objects: [],
+      reasoning: 'Evidence supports the food matching.',
+      food_detection_available: true,
+      food_detection_mode: 'vit-food101',
+      food_detector_name: 'nateraw/food',
+      predicted_food_labels: ['pizza'],
+      predicted_top_label: 'pizza',
+      predicted_top_confidence: 0.95,
+      expected_food_labels: ['pizza'],
+      food_match_score: 1.0,
+      food_match_category: 'plausible_match',
+      food_match_reasoning: 'Verification passed: Plausible food match detected (pizza).',
+      contract_version: 1
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'QUALITY_ISSUE')
+      .field('description', 'cold pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.warning_state, null);
+    assert.ok(res.body.decision_reason.includes('Plausible food match, but evidence support is uncertain'));
+    assert.strictEqual(lastCreatedComplaintData.warning_state, null);
+  });
+
+  test('y) Expected pizza + burger image -> mismatch (PENDING, warning warning_state) under Phase 2 food contract', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'FOOD_MISMATCH',
+      reason: 'Warning: Captured food (burger) does not match the ordered item (pizza).',
+      face_detected: false,
+      confidence: 0.9,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'burger',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_mismatch',
+      issue_support_level: 'issue_uncertain',
+      detected_objects: [],
+      reasoning: 'Evidence mismatch.',
+      food_detection_available: true,
+      food_detection_mode: 'vit-food101',
+      food_detector_name: 'nateraw/food',
+      predicted_food_labels: ['burger'],
+      predicted_top_label: 'burger',
+      predicted_top_confidence: 0.95,
+      expected_food_labels: ['pizza'],
+      food_match_score: 0.0,
+      food_match_category: 'mismatch',
+      food_match_reasoning: 'Warning: Captured food (burger) does not match the ordered item (pizza).',
+      contract_version: 1
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'QUALITY_ISSUE')
+      .field('description', 'cold pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.warning_state, 'WARNING_SENT');
+    assert.ok(res.body.decision_reason.includes('Captured food (burger) does not match the ordered item. Please submit a valid photo.'));
+    assert.strictEqual(lastCreatedComplaintData.warning_state, 'WARNING_SENT');
+    assert.strictEqual(lastCreatedComplaintData.mismatch_attempts, 1);
+  });
+
+  test('z) Expected food + non-food image -> non_food (AUTO_REJECTED) under Phase 2 food contract', async () => {
+    // Setup stubs
+    mockVerifyImageResult = {
+      decision: 'REJECT_NON_FOOD',
+      reason: 'Rejected: Captured evidence does not appear to contain recognizable food.',
+      face_detected: false,
+      confidence: 0.05,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'unknown',
+      prediction_confidence: 0.05,
+      food_match_result: 'uncertain',
+      issue_support_level: 'fraud_suspected',
+      detected_objects: [],
+      reasoning: 'Evidence contains no food.',
+      food_detection_available: true,
+      food_detection_mode: 'vit-food101',
+      food_detector_name: 'nateraw/food',
+      predicted_food_labels: [],
+      predicted_top_label: 'unknown',
+      predicted_top_confidence: 0.05,
+      expected_food_labels: ['pizza'],
+      food_match_score: 0.0,
+      food_match_category: 'non_food',
+      food_match_reasoning: 'Rejected: Captured evidence does not appear to contain recognizable food.',
+      contract_version: 1
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'QUALITY_ISSUE')
+      .field('description', 'cold pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'AUTO_REJECTED');
+    assert.strictEqual(res.body.warning_state, null);
+    assert.ok(res.body.decision_reason.includes('Captured evidence does not appear to contain recognizable food.'));
+  });
+
+  test('aa) Food model unavailable fallback -> legacy fallback behavior preserved under Phase 2 food contract', async () => {
+    // Setup stubs representing unavailable/fallback mode
+    mockVerifyImageResult = {
+      decision: 'UNCERTAIN',
+      reason: 'Food detector unavailable (fallback mode).',
+      face_detected: false,
+      confidence: 0.0,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'unknown',
+      prediction_confidence: 0.0,
+      food_match_result: 'uncertain',
+      issue_support_level: 'issue_uncertain',
+      detected_objects: [],
+      reasoning: 'Fallback mode active.',
+      food_detection_available: false,
+      food_detection_mode: 'fallback',
+      food_detector_name: 'vit-fallback',
+      predicted_food_labels: [],
+      predicted_top_label: 'unknown',
+      predicted_top_confidence: 0.0,
+      expected_food_labels: ['pizza'],
+      food_match_score: 0.0,
+      food_match_category: 'unknown',
+      food_match_reasoning: 'Food detector unavailable.',
+      contract_version: 1
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'QUALITY_ISSUE')
+      .field('description', 'cold pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.warning_state, null);
+    assert.ok(res.body.decision_reason.includes('Verification uncertain: Sent for manual review.'));
+  });
+
+  test('ab) FOREIGN_OBJECT coexisting with new food fields under Phase 2 food contract', async () => {
+    // Setup stubs with both FOREIGN_OBJECT detection fields and new food fields
+    mockVerifyImageResult = {
+      decision: 'FOOD_MATCH_PLAUSIBLE',
+      reason: 'Plausible food match and foreign object detected.',
+      face_detected: false,
+      confidence: 0.95,
+      suspicious_capture: false,
+      is_ai_generated: false,
+      predicted_label: 'pizza',
+      prediction_confidence: 0.95,
+      food_match_result: 'food_match_plausible',
+      issue_support_level: 'issue_supported_strong',
+      detected_objects: ['insect/bug'],
+      reasoning: 'Evidence strongly supports complaint.',
+      foreign_object_detection_available: true,
+      foreign_object_detection_mode: 'owlvit',
+      foreign_object_detector_name: 'google/owlvit-base-patch32',
+      foreign_object_detected: true,
+      foreign_object_labels: ['bug'],
+      foreign_object_confidence: 0.88,
+      foreign_object_boxes: [[10, 20, 30, 40]],
+      foreign_object_reasoning: 'Bug found in pizza.',
+      food_detection_available: true,
+      food_detection_mode: 'vit-food101',
+      food_detector_name: 'nateraw/food',
+      predicted_food_labels: ['pizza'],
+      predicted_top_label: 'pizza',
+      predicted_top_confidence: 0.95,
+      expected_food_labels: ['pizza'],
+      food_match_score: 1.0,
+      food_match_category: 'plausible_match',
+      food_match_reasoning: 'Plausible pizza match.',
+      contract_version: 1
+    };
+    mockOrdersForCustomer = [{ id: 100, status: 'DELIVERED', restaurant_id: 1, total_price: 150 }];
+    mockUser = { id: 1, trust_score: 85 };
+    mockComplaintFindByOrderId = null;
+    mockOrderItems = [{ name: 'pizza' }];
+    lastCreatedComplaintData = null;
+
+    const res = await request(app)
+      .post('/api/complaints')
+      .set('Authorization', `Bearer ${token}`)
+      .field('order_id', '100')
+      .field('type', 'FOREIGN_OBJECT')
+      .field('description', 'bug in pizza')
+      .field('challenge_sequence', '1: Normal Meal | 2: Angle | 3: Receipt')
+      .field('challenge_completed', 'true')
+      .attach('images', buffer1, 'image1.jpg')
+      .attach('images', buffer2, 'image2.jpg')
+      .attach('images', buffer3, 'image3.jpg');
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.status, 'PENDING');
+    assert.strictEqual(res.body.issue_support_level, 'issue_supported_strong');
+    assert.ok(res.body.decision_reason.includes('high-priority review'));
+    assert.ok(res.body.decision_reason.includes('Detected: bug'));
+  });
 });
+
 
