@@ -177,6 +177,16 @@ const OrderModel = {
       total_complaints: complaintCountRow?.total_complaints ?? 0,
     };
   },
+
+  async findById(orderId) {
+    const [rows] = await pool.query(
+      `SELECT id, customer_id, restaurant_id, status, total_price, created_at, risk_score, risk_flags, is_archived
+       FROM orders
+       WHERE id = ?`,
+      [orderId]
+    );
+    return rows[0] || null;
+  },
 };
 
 module.exports = OrderModel;

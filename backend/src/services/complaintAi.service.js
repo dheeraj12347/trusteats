@@ -6,7 +6,7 @@ const path = require('path');
  */
 const ComplaintAiService = {
   // Helper to run Python Image Verification
-  async verifyImage(img1, img2, img3, challengeSequence, expectedFoodLabels) {
+  async verifyImage(img1, img2, img3, challengeSequence, expectedFoodLabels, complaintType, description) {
     return new Promise((resolve) => {
       if (!img1 || !img2 || !img3) {
         return resolve({
@@ -27,7 +27,16 @@ const ComplaintAiService = {
       }
 
       const scriptPath = path.join(__dirname, '../ai/verify_image.py');
-      const py = spawn('python', [scriptPath, img1, img2, img3, challengeSequence || '', expectedFoodLabels || '']);
+      const py = spawn('python', [
+        scriptPath,
+        img1,
+        img2,
+        img3,
+        challengeSequence || '',
+        expectedFoodLabels || '',
+        complaintType || '',
+        description || ''
+      ]);
       let dataString = "";
 
       const timeout = setTimeout(() => {

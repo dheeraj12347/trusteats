@@ -80,10 +80,12 @@ const ComplaintController = {
           .json({ message: 'Exactly 3 camera evidence images are required for verification.' });
       }
 
-      // Check mime types
+      // Check mime types and extensions
       const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
       for (const file of req.files) {
-        if (!allowedMimeTypes.includes(file.mimetype)) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (!allowedMimeTypes.includes(file.mimetype) || !allowedExtensions.includes(ext)) {
           return res.status(400).json({ message: 'Only images (jpeg, png, gif, webp) are allowed.' });
         }
       }
@@ -120,7 +122,9 @@ const ComplaintController = {
         image_path_2,
         image_path_3,
         challenge_sequence,
-        expectedLabelsStr
+        expectedLabelsStr,
+        type,
+        description
       );
       console.log('DEBUG: verification result =', verification);
 
@@ -230,6 +234,15 @@ const ComplaintController = {
         io.emit('complaintCreated', fullComplaint);
       }
 
+      const ordered_item = orderItems.map(oi => oi.item_name).join(', ');
+      const food_match_result = verification.food_match_result || 
+        (verification.decision === 'FOOD_MISMATCH' ? 'food_mismatch' : (verification.decision === 'FOOD_MATCH_PLAUSIBLE' ? 'food_match_plausible' : 'uncertain'));
+      const detected_objects = verification.detected_objects || [];
+      const issue_support_level = verification.issue_support_level || 
+        ((['REJECT', 'REJECT_FACE_PRESENT', 'REJECT_NON_FOOD'].includes(verification.decision)) ? 'fraud_suspected' : 'issue_uncertain');
+      const reasoning = verification.reasoning || verification.reason || '';
+      const confidence = verification.confidence ?? 0.0;
+
       return res.status(201).json({
         message: decisionResult.warning_state === 'WARNING_SENT' ? 'Warning: Food mismatch' : 'Complaint submitted',
         complaint_id: complaintId,
@@ -239,6 +252,15 @@ const ComplaintController = {
         ai_decision: aiResult ? aiResult.ai_decision : 'REJECT',
         image_path,
         image_is_ai: verification.is_ai_generated ? 1 : 0,
+        ordered_item,
+        complaint_type: type,
+        food_match_result,
+        detected_objects,
+        issue_support_level,
+        reasoning,
+        confidence,
+        recommended_status: decisionResult.status,
+        recommended_warning_state: decisionResult.warning_state,
         ...fullComplaint,
       });
     } catch (err) {
@@ -264,6 +286,15 @@ const ComplaintController = {
   async listForRestaurant(req, res) {
     try {
       const { restaurantId } = req.params;
+
+      // Access isolation: RESTAURANT role must only access their own restaurant's data
+      if (req.user.role === 'RESTAURANT') {
+        const user = await UserModel.findById(req.user.id);
+        if (!user || user.restaurant_id !== parseInt(restaurantId)) {
+          return res.status(403).json({ message: 'Forbidden' });
+        }
+      }
+
       const complaints = await ComplaintModel.listForRestaurant(restaurantId);
       return res.json({ complaints });
     } catch (err) {

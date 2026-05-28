@@ -2,11 +2,11 @@
 const { pool } = require('../config/db');
 
 const UserModel = {
-  async create({ name, email, password, role }) {
+  async create({ name, email, password, role, restaurant_id }) {
     const [result] = await pool.query(
-      `INSERT INTO users (name, email, password, role)
-       VALUES (?, ?, ?, ?)`,
-      [name, email, password, role]
+      `INSERT INTO users (name, email, password, role, restaurant_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [name, email, password, role, restaurant_id || null]
     );
 
     // NOTE: if you also store restaurant_id at creation time,
@@ -17,7 +17,7 @@ const UserModel = {
       email,
       role,
       trust_score: 100,
-      restaurant_id: null,
+      restaurant_id: restaurant_id || null,
     };
   },
 

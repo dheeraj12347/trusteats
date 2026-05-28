@@ -15,6 +15,7 @@ function authMiddleware(req, res, next) {
     req.user = {
       id: decoded.id,
       role: decoded.role,
+      restaurant_id: decoded.restaurant_id || null
     };
     next();
   } catch (err) {

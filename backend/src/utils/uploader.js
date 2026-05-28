@@ -29,9 +29,12 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/jpg'];
-  if (!allowed.includes(file.mimetype)) {
-    return cb(new Error('Only jpg, jpeg, png files are allowed'), false);
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (!allowedMimeTypes.includes(file.mimetype) || !allowedExtensions.includes(ext)) {
+    return cb(new Error('Only images (jpg, jpeg, png, gif, webp) are allowed'), false);
   }
   cb(null, true);
 };

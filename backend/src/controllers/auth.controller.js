@@ -2,11 +2,12 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/user.model');
+const { pool } = require('../config/db');
 
 const AuthController = {
   async register(req, res) {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, email, password, role, restaurant_id } = req.body;
 
       if (!name || !email || !password) {
         return res
@@ -25,15 +26,26 @@ const AuthController = {
           ? role
           : 'CUSTOMER';
 
+      if (userRole === 'RESTAURANT') {
+        if (!restaurant_id) {
+          return res.status(400).json({ message: 'restaurant_id is required for RESTAURANT role' });
+        }
+        const [restRows] = await pool.query('SELECT id FROM restaurants WHERE id = ?', [restaurant_id]);
+        if (restRows.length === 0) {
+          return res.status(400).json({ message: 'Invalid restaurant_id' });
+        }
+      }
+
       const user = await UserModel.create({
         name,
         email,
         password: hashed,
         role: userRole,
+        restaurant_id: userRole === 'RESTAURANT' ? restaurant_id : null,
       });
 
       const token = jwt.sign(
-        { id: user.id, role: user.role },
+        { id: user.id, role: user.role, restaurant_id: user.restaurant_id },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );
@@ -80,7 +92,7 @@ const AuthController = {
       console.log('LOGIN user from DB:', user);
 
       const token = jwt.sign(
-        { id: user.id, role: user.role },
+        { id: user.id, role: user.role, restaurant_id: user.restaurant_id },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );

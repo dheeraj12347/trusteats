@@ -1,0 +1,23 @@
+{
+  "decision": "FOOD_MATCH_PLAUSIBLE",
+  "reason": "Verification passed: Plausible food match detected (burger) and insect-like object detected.",
+  "confidence": 0.95,
+  "detected_objects": [
+    "insect/bug"
+  ],
+  "issue_support_level": "issue_supported_strong",
+  "food_match_result": "food_match_plausible",
+  "face_detected": false,
+  "predicted_label": "burger",
+  "prediction_confidence": 0.95,
+  "checks": {
+    "files_valid": true,
+    "quality_ok": true,
+    "screen_recap_suspected": false,
+    "metadata_ok": true
+  },
+  "ordered_item": "burger",
+  "complaint_type": "FOREIGN_OBJECT",
+  "reasoning": "Evidence strongly supports the complaint. Detected insect/bug.",
+  "contract_version": 1
+}

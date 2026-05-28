@@ -1,5 +1,6 @@
 // src/controllers/order.controller.js
 const OrderModel = require('../models/order.model');
+const UserModel = require('../models/user.model');
 
 const OrderController = {
   // POST /api/orders
@@ -107,6 +108,15 @@ const OrderController = {
   async restaurantOrders(req, res) {
     try {
       const { restaurantId } = req.params;
+
+      // Access isolation: RESTAURANT role must only access their own restaurant's data
+      if (req.user.role === 'RESTAURANT') {
+        const user = await UserModel.findById(req.user.id);
+        if (!user || user.restaurant_id !== parseInt(restaurantId)) {
+          return res.status(403).json({ message: 'Forbidden' });
+        }
+      }
+
       const orders = await OrderModel.getOrdersForRestaurant(restaurantId);
       return res.json({ orders });
     } catch (err) {
@@ -124,6 +134,18 @@ const OrderController = {
       const allowed = ['PLACED', 'PREPARING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
       if (!allowed.includes(status)) {
         return res.status(400).json({ message: 'Invalid status' });
+      }
+
+      // Access isolation: RESTAURANT role must only update their own restaurant's orders
+      if (req.user.role === 'RESTAURANT') {
+        const user = await UserModel.findById(req.user.id);
+        const order = await OrderModel.findById(id);
+        if (!order) {
+          return res.status(404).json({ message: 'Order not found' });
+        }
+        if (!user || user.restaurant_id !== order.restaurant_id) {
+          return res.status(403).json({ message: 'Forbidden' });
+        }
       }
 
       // update in DB and get full updated order

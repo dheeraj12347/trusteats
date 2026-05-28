@@ -1,0 +1,325 @@
+[dotenv@17.3.1] injecting env (6) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+
+=== SCENARIO: Face Present Check ===
+HTTP Status: 201
+Response Body: {
+  "message": "Complaint processed",
+  "complaint": {
+    "id": 37,
+    "complaint_id": 37,
+    "order_id": 17,
+    "customer_id": 1,
+    "restaurant_id": 1,
+    "type": "QUALITY_ISSUE",
+    "description": "E2E Test: Face Present Check",
+    "status": "AUTO_REJECTED",
+    "ai_decision": "APPROVE",
+    "trust_score": 95,
+    "ai_score": 95,
+    "decision_reason": "Refund rejected: Face detected in evidence photos (MOCK).",
+    "image_path": "/uploads/complaints/camera-ab311d23-419b-498d-add8-015b8e214076-1-1779872457119_mock_face_present.png",
+    "image_path_2": "/uploads/complaints/camera-ab311d23-419b-498d-add8-015b8e214076-2-1779872457121_mock_face_present.png",
+    "image_path_3": "/uploads/complaints/camera-ab311d23-419b-498d-add8-015b8e214076-3-1779872457122_mock_face_present.png",
+    "image_is_ai": 0,
+    "suspicious_capture": 0,
+    "verification_decision": "REJECT_FACE_PRESENT",
+    "verification_confidence": 1,
+    "ai_confidence": 1,
+    "verification_reason": "Face detected in evidence photos (MOCK).",
+    "challenge_completed": 1,
+    "created_at": "2026-05-27T09:00:57.659Z",
+    "predicted_label": null,
+    "prediction_confidence": 0,
+    "face_detected": 1,
+    "expected_labels": "[\"hamburger\"]",
+    "verifier_decision": "REJECT_FACE_PRESENT",
+    "verifier_reason": "Face detected in evidence photos (MOCK).",
+    "mismatch_attempts": 0,
+    "warning_state": null,
+    "raw_verifier_response": "{\"is_ai_generated\":false,\"is_appropriate\":false,\"confidence\":1,\"reason\":\"Face detected in evidence photos (MOCK).\",\"decision\":\"REJECT_FACE_PRESENT\",\"suspicious_capture\":false,\"challenge_consistent\":true,\"checks\":{\"files_valid\":true,\"quality_ok\":true,\"screen_recap_suspected\":false,\"metadata_ok\":true},\"ai_provider\":null,\"face_detected\":true,\"predicted_label\":null,\"prediction_confidence\":0,\"expected_labels\":[\"hamburger\"],\"matched_frames\":0,\"total_frames\":3,\"per_frame_predictions\":[],\"raw model summary\":\"None\",\"verified\":true}"
+  }
+}
+--- Database Verification ---
+predicted_label: null
+prediction_confidence: 0
+expected_labels: ["hamburger"]
+face_detected: 1
+verifier_decision: REJECT_FACE_PRESENT
+verifier_reason: Face detected in evidence photos (MOCK).
+mismatch_attempts: 0
+warning_state: null
+final status in DB: AUTO_REJECTED
+
+=== SCENARIO: Non-Food Low Confidence Check ===
+HTTP Status: 201
+Response Body: {
+  "message": "Complaint processed",
+  "complaint": {
+    "id": 38,
+    "complaint_id": 38,
+    "order_id": 17,
+    "customer_id": 1,
+    "restaurant_id": 1,
+    "type": "QUALITY_ISSUE",
+    "description": "E2E Test: Non-Food Low Confidence Check",
+    "status": "AUTO_REJECTED",
+    "ai_decision": "APPROVE",
+    "trust_score": 95,
+    "ai_score": 95,
+    "decision_reason": "Refund rejected: All evidence photos lack recognizable food features (MOCK).",
+    "image_path": "/uploads/complaints/camera-ca21d04d-0d04-4fbf-849d-46dd675ebb21-1-1779872457712_mock_non_food.png",
+    "image_path_2": "/uploads/complaints/camera-ca21d04d-0d04-4fbf-849d-46dd675ebb21-2-1779872457714_mock_non_food.png",
+    "image_path_3": "/uploads/complaints/camera-ca21d04d-0d04-4fbf-849d-46dd675ebb21-3-1779872457723_mock_non_food.png",
+    "image_is_ai": 0,
+    "suspicious_capture": 0,
+    "verification_decision": "REJECT_NON_FOOD",
+    "verification_confidence": 0.25,
+    "ai_confidence": 0.25,
+    "verification_reason": "All evidence photos lack recognizable food features (MOCK).",
+    "challenge_completed": 1,
+    "created_at": "2026-05-27T09:00:58.337Z",
+    "predicted_label": "blank",
+    "prediction_confidence": 0.25,
+    "face_detected": 0,
+    "expected_labels": "[\"hamburger\"]",
+    "verifier_decision": "REJECT_NON_FOOD",
+    "verifier_reason": "All evidence photos lack recognizable food features (MOCK).",
+    "mismatch_attempts": 0,
+    "warning_state": null,
+    "raw_verifier_response": "{\"is_ai_generated\":false,\"is_appropriate\":false,\"confidence\":0.25,\"reason\":\"All evidence photos lack recognizable food features (MOCK).\",\"decision\":\"REJECT_NON_FOOD\",\"suspicious_capture\":false,\"challenge_consistent\":true,\"checks\":{\"files_valid\":true,\"quality_ok\":true,\"screen_recap_suspected\":false,\"metadata_ok\":true},\"ai_provider\":null,\"face_detected\":false,\"predicted_label\":\"blank\",\"prediction_confidence\":0.25,\"expected_labels\":[\"hamburger\"],\"matched_frames\":0,\"total_frames\":3,\"per_frame_predictions\":[],\"raw model summary\":\"None\",\"verified\":true}"
+  }
+}
+--- Database Verification ---
+predicted_label: blank
+prediction_confidence: 0.25
+expected_labels: ["hamburger"]
+face_detected: 0
+verifier_decision: REJECT_NON_FOOD
+verifier_reason: All evidence photos lack recognizable food features (MOCK).
+mismatch_attempts: 0
+warning_state: null
+final status in DB: AUTO_REJECTED
+
+=== SCENARIO: Food Mismatch (First Attempt) ===
+HTTP Status: 201
+Response Body: {
+  "message": "Complaint processed",
+  "complaint": {
+    "id": 39,
+    "complaint_id": 39,
+    "order_id": 17,
+    "customer_id": 1,
+    "restaurant_id": 1,
+    "type": "QUALITY_ISSUE",
+    "description": "E2E Test: Food Mismatch (First Attempt)",
+    "status": "PENDING",
+    "ai_decision": "APPROVE",
+    "trust_score": 95,
+    "ai_score": 95,
+    "decision_reason": "Camera evidence verified. Trust evaluation: approved (95/100). policy: Food mismatch: ordered item maps to expected, but evidence consistently shows pizza (MOCK).",
+    "image_path": "/uploads/complaints/camera-9ed829dc-a804-4957-a378-6bffb9945e55-1-1779872458379_mock_mismatch.png",
+    "image_path_2": "/uploads/complaints/camera-9ed829dc-a804-4957-a378-6bffb9945e55-2-1779872458380_mock_mismatch.png",
+    "image_path_3": "/uploads/complaints/camera-9ed829dc-a804-4957-a378-6bffb9945e55-3-1779872458384_mock_mismatch.png",
+    "image_is_ai": 0,
+    "suspicious_capture": 0,
+    "verification_decision": "FOOD_MISMATCH",
+    "verification_confidence": 0.85,
+    "ai_confidence": 0.85,
+    "verification_reason": "Food mismatch: ordered item maps to expected, but evidence consistently shows pizza (MOCK).",
+    "challenge_completed": 1,
+    "created_at": "2026-05-27T09:00:58.935Z",
+    "predicted_label": "pizza",
+    "prediction_confidence": 0.85,
+    "face_detected": 0,
+    "expected_labels": "[\"hamburger\"]",
+    "verifier_decision": "FOOD_MISMATCH",
+    "verifier_reason": "Food mismatch: ordered item maps to expected, but evidence consistently shows pizza (MOCK).",
+    "mismatch_attempts": 1,
+    "warning_state": "WARNING_SENT",
+    "raw_verifier_response": "{\"is_ai_generated\":false,\"is_appropriate\":false,\"confidence\":0.85,\"reason\":\"Food mismatch: ordered item maps to expected, but evidence consistently shows pizza (MOCK).\",\"decision\":\"FOOD_MISMATCH\",\"suspicious_capture\":false,\"challenge_consistent\":true,\"checks\":{\"files_valid\":true,\"quality_ok\":true,\"screen_recap_suspected\":false,\"metadata_ok\":true},\"ai_provider\":null,\"face_detected\":false,\"predicted_label\":\"pizza\",\"prediction_confidence\":0.85,\"expected_labels\":[\"hamburger\"],\"matched_frames\":0,\"total_frames\":3,\"per_frame_predictions\":[],\"raw model summary\":\"None\",\"verified\":true}"
+  }
+}
+--- Database Verification ---
+predicted_label: pizza
+prediction_confidence: 0.85
+expected_labels: ["hamburger"]
+face_detected: 0
+verifier_decision: FOOD_MISMATCH
+verifier_reason: Food mismatch: ordered item maps to expected, but evidence consistently shows pizza (MOCK).
+mismatch_attempts: 1
+warning_state: WARNING_SENT
+final status in DB: PENDING
+
+=== SCENARIO: Food Mismatch (Second Attempt / Retry) ===
+HTTP Status: 500
+Response Body: {
+  "message": "Internal server error"
+}
+--- Database Verification ---
+predicted_label: pizza
+prediction_confidence: 0.85
+expected_labels: ["hamburger"]
+face_detected: 0
+verifier_decision: FOOD_MISMATCH
+verifier_reason: Food mismatch: ordered item maps to expected, but evidence consistently shows pizza (MOCK).
+mismatch_attempts: 1
+warning_state: WARNING_SENT
+final status in DB: PENDING
+
+=== SCENARIO: Food Match Plausible Check ===
+HTTP Status: 201
+Response Body: {
+  "message": "Complaint processed",
+  "complaint": {
+    "id": 40,
+    "complaint_id": 40,
+    "order_id": 17,
+    "customer_id": 1,
+    "restaurant_id": 1,
+    "type": "QUALITY_ISSUE",
+    "description": "E2E Test: Food Match Plausible Check",
+    "status": "PENDING",
+    "ai_decision": "APPROVE",
+    "trust_score": 95,
+    "ai_score": 95,
+    "decision_reason": "Camera evidence verified. Trust evaluation: approved (95/100). policy: Expected food item found in 3 of 3 frames (MOCK).",
+    "image_path": "/uploads/complaints/camera-c4318eae-56b3-4070-9483-24532a52b967-1-1779872459580_mock_plausible.png",
+    "image_path_2": "/uploads/complaints/camera-c4318eae-56b3-4070-9483-24532a52b967-2-1779872459582_mock_plausible.png",
+    "image_path_3": "/uploads/complaints/camera-c4318eae-56b3-4070-9483-24532a52b967-3-1779872459585_mock_plausible.png",
+    "image_is_ai": 0,
+    "suspicious_capture": 0,
+    "verification_decision": "FOOD_MATCH_PLAUSIBLE",
+    "verification_confidence": 0.92,
+    "ai_confidence": 0.92,
+    "verification_reason": "Expected food item found in 3 of 3 frames (MOCK).",
+    "challenge_completed": 1,
+    "created_at": "2026-05-27T09:01:00.169Z",
+    "predicted_label": "hamburger",
+    "prediction_confidence": 0.92,
+    "face_detected": 0,
+    "expected_labels": "[\"hamburger\"]",
+    "verifier_decision": "FOOD_MATCH_PLAUSIBLE",
+    "verifier_reason": "Expected food item found in 3 of 3 frames (MOCK).",
+    "mismatch_attempts": 0,
+    "warning_state": null,
+    "raw_verifier_response": "{\"is_ai_generated\":false,\"is_appropriate\":true,\"confidence\":0.92,\"reason\":\"Expected food item found in 3 of 3 frames (MOCK).\",\"decision\":\"FOOD_MATCH_PLAUSIBLE\",\"suspicious_capture\":false,\"challenge_consistent\":true,\"checks\":{\"files_valid\":true,\"quality_ok\":true,\"screen_recap_suspected\":false,\"metadata_ok\":true},\"ai_provider\":null,\"face_detected\":false,\"predicted_label\":\"hamburger\",\"prediction_confidence\":0.92,\"expected_labels\":[\"hamburger\"],\"matched_frames\":3,\"total_frames\":3,\"per_frame_predictions\":[],\"raw model summary\":\"None\",\"verified\":true}"
+  }
+}
+--- Database Verification ---
+predicted_label: hamburger
+prediction_confidence: 0.92
+expected_labels: ["hamburger"]
+face_detected: 0
+verifier_decision: FOOD_MATCH_PLAUSIBLE
+verifier_reason: Expected food item found in 3 of 3 frames (MOCK).
+mismatch_attempts: 0
+warning_state: null
+final status in DB: PENDING
+
+=== SCENARIO: Uncertain / No Mapping Check ===
+HTTP Status: 201
+Response Body: {
+  "message": "Complaint processed",
+  "complaint": {
+    "id": 41,
+    "complaint_id": 41,
+    "order_id": 17,
+    "customer_id": 1,
+    "restaurant_id": 1,
+    "type": "QUALITY_ISSUE",
+    "description": "E2E Test: Uncertain / No Mapping Check",
+    "status": "PENDING",
+    "ai_decision": "APPROVE",
+    "trust_score": 95,
+    "ai_score": 95,
+    "decision_reason": "Camera evidence verified. Trust evaluation: approved (95/100). policy: Model classification is uncertain or no expected label mapping exists (MOCK).",
+    "image_path": "/uploads/complaints/camera-c2234f24-edec-4c75-8b24-ff23b6b3466c-1-1779872460206_mock_uncertain.png",
+    "image_path_2": "/uploads/complaints/camera-c2234f24-edec-4c75-8b24-ff23b6b3466c-2-1779872460207_mock_uncertain.png",
+    "image_path_3": "/uploads/complaints/camera-c2234f24-edec-4c75-8b24-ff23b6b3466c-3-1779872460209_mock_uncertain.png",
+    "image_is_ai": 0,
+    "suspicious_capture": 0,
+    "verification_decision": "UNCERTAIN",
+    "verification_confidence": 0.55,
+    "ai_confidence": 0.55,
+    "verification_reason": "Model classification is uncertain or no expected label mapping exists (MOCK).",
+    "challenge_completed": 1,
+    "created_at": "2026-05-27T09:01:00.799Z",
+    "predicted_label": "apple_pie",
+    "prediction_confidence": 0.55,
+    "face_detected": 0,
+    "expected_labels": "[\"hamburger\"]",
+    "verifier_decision": "UNCERTAIN",
+    "verifier_reason": "Model classification is uncertain or no expected label mapping exists (MOCK).",
+    "mismatch_attempts": 0,
+    "warning_state": null,
+    "raw_verifier_response": "{\"is_ai_generated\":false,\"is_appropriate\":false,\"confidence\":0.55,\"reason\":\"Model classification is uncertain or no expected label mapping exists (MOCK).\",\"decision\":\"UNCERTAIN\",\"suspicious_capture\":false,\"challenge_consistent\":true,\"checks\":{\"files_valid\":true,\"quality_ok\":true,\"screen_recap_suspected\":false,\"metadata_ok\":true},\"ai_provider\":null,\"face_detected\":false,\"predicted_label\":\"apple_pie\",\"prediction_confidence\":0.55,\"expected_labels\":[\"hamburger\"],\"matched_frames\":1,\"total_frames\":3,\"per_frame_predictions\":[],\"raw model summary\":\"None\",\"verified\":true}"
+  }
+}
+--- Database Verification ---
+predicted_label: apple_pie
+prediction_confidence: 0.55
+expected_labels: ["hamburger"]
+face_detected: 0
+verifier_decision: UNCERTAIN
+verifier_reason: Model classification is uncertain or no expected label mapping exists (MOCK).
+mismatch_attempts: 0
+warning_state: null
+final status in DB: PENDING
+
+=== RETRY & DUPLICATE BLOCKS VERIFICATION ===
+
+=== SCENARIO: Plausible Match Baseline ===
+HTTP Status: 201
+Response Body: {
+  "message": "Complaint processed",
+  "complaint": {
+    "id": 42,
+    "complaint_id": 42,
+    "order_id": 17,
+    "customer_id": 1,
+    "restaurant_id": 1,
+    "type": "QUALITY_ISSUE",
+    "description": "E2E Test: Plausible Match Baseline",
+    "status": "PENDING",
+    "ai_decision": "APPROVE",
+    "trust_score": 95,
+    "ai_score": 95,
+    "decision_reason": "Camera evidence verified. Trust evaluation: approved (95/100). policy: Expected food item found in 3 of 3 frames (MOCK).",
+    "image_path": "/uploads/complaints/camera-0f2c7265-0920-4542-90de-cf8a9d01abc6-1-1779872460837_mock_plausible.png",
+    "image_path_2": "/uploads/complaints/camera-0f2c7265-0920-4542-90de-cf8a9d01abc6-2-1779872460839_mock_plausible.png",
+    "image_path_3": "/uploads/complaints/camera-0f2c7265-0920-4542-90de-cf8a9d01abc6-3-1779872460840_mock_plausible.png",
+    "image_is_ai": 0,
+    "suspicious_capture": 0,
+    "verification_decision": "FOOD_MATCH_PLAUSIBLE",
+    "verification_confidence": 0.92,
+    "ai_confidence": 0.92,
+    "verification_reason": "Expected food item found in 3 of 3 frames (MOCK).",
+    "challenge_completed": 1,
+    "created_at": "2026-05-27T09:01:01.421Z",
+    "predicted_label": "hamburger",
+    "prediction_confidence": 0.92,
+    "face_detected": 0,
+    "expected_labels": "[\"hamburger\"]",
+    "verifier_decision": "FOOD_MATCH_PLAUSIBLE",
+    "verifier_reason": "Expected food item found in 3 of 3 frames (MOCK).",
+    "mismatch_attempts": 0,
+    "warning_state": null,
+    "raw_verifier_response": "{\"is_ai_generated\":false,\"is_appropriate\":true,\"confidence\":0.92,\"reason\":\"Expected food item found in 3 of 3 frames (MOCK).\",\"decision\":\"FOOD_MATCH_PLAUSIBLE\",\"suspicious_capture\":false,\"challenge_consistent\":true,\"checks\":{\"files_valid\":true,\"quality_ok\":true,\"screen_recap_suspected\":false,\"metadata_ok\":true},\"ai_provider\":null,\"face_detected\":false,\"predicted_label\":\"hamburger\",\"prediction_confidence\":0.92,\"expected_labels\":[\"hamburger\"],\"matched_frames\":3,\"total_frames\":3,\"per_frame_predictions\":[],\"raw model summary\":\"None\",\"verified\":true}"
+  }
+}
+--- Database Verification ---
+predicted_label: hamburger
+prediction_confidence: 0.92
+expected_labels: ["hamburger"]
+face_detected: 0
+verifier_decision: FOOD_MATCH_PLAUSIBLE
+verifier_reason: Expected food item found in 3 of 3 frames (MOCK).
+mismatch_attempts: 0
+warning_state: null
+final status in DB: PENDING
+
+--- Duplicate complaint block test ---
+Duplicate Post Status (Expected 409): 409
+Duplicate Post Body: {
+  "message": "Complaint already exists for this order"
+}

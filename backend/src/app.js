@@ -38,4 +38,13 @@ app.use('/api/reviews', reviewRoutes); // NEW
 // Initialize DB connection on startup
 testConnection();
 
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  if (err.name === 'MulterError' || (err.message && err.message.includes('are allowed'))) {
+    return res.status(400).json({ message: err.message });
+  }
+  console.error('Unhandled server error:', err);
+  res.status(500).json({ message: 'Internal server error' });
+});
+
 module.exports = app;
