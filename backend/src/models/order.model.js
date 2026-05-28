@@ -71,7 +71,9 @@ const OrderModel = {
           c.status AS complaint_status,
           c.ai_score AS complaint_ai_score,
           c.decision_reason AS complaint_decision_reason,
-          c.image_is_ai AS complaint_image_is_ai
+          c.image_is_ai AS complaint_image_is_ai,
+          c.warning_state AS complaint_warning_state,
+          c.mismatch_attempts AS complaint_mismatch_attempts
        FROM orders o
        JOIN restaurants r ON o.restaurant_id = r.id
        LEFT JOIN complaints c 
@@ -104,7 +106,9 @@ const OrderModel = {
           c.status AS complaint_status,
           c.ai_score AS complaint_ai_score,
           c.decision_reason AS complaint_decision_reason,
-          c.image_is_ai AS complaint_image_is_ai
+          c.image_is_ai AS complaint_image_is_ai,
+          c.warning_state AS complaint_warning_state,
+          c.mismatch_attempts AS complaint_mismatch_attempts
        FROM orders o
        JOIN users u ON o.customer_id = u.id
        LEFT JOIN complaints c 

@@ -1,29 +1,65 @@
 .te-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-xxl);
+}
+
+.te-section {
+  display: flex;
+  flex-direction: column;
 }
 
 .te-section h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+  font-family: var(--font-headings);
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: var(--space-lg);
+  letter-spacing: -0.015em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.te-section h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-color);
+  margin-left: var(--space-md);
 }
 
 .te-banner {
-  padding: 0.7rem 1rem;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, #22c55e1a, #22c55e33);
-  border: 1px solid #22c55e55;
-  color: #166534;
-  font-size: 0.9rem;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background-color: var(--success-light);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  animation: bannerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bannerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .te-orders-grid,
 .te-restaurants-grid,
 .te-menu-grid {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-lg);
 }
 
 @media (min-width: 768px) {
@@ -36,101 +72,138 @@
   }
 }
 
+/* Card Styling Override */
 .te-order-card,
 .te-restaurant-card,
 .te-menu-card {
-  border-radius: 1rem;
-  padding: 0.9rem;
-  background: radial-gradient(circle at top left, #0f172a, #020617);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  color: #e5e7eb;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.8);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  transform: translateY(0);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  gap: var(--space-md);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .te-order-card:hover,
 .te-restaurant-card:hover,
 .te-menu-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
-  border-color: rgba(56, 189, 248, 0.6);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(217, 59, 15, 0.2);
 }
 
-.te-order-header > div {
+.te-order-header {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--border-color);
+  padding-bottom: var(--space-sm);
 }
 
 .te-order-id {
-  font-weight: 500;
+  font-family: var(--font-headings);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-primary);
 }
 
 .te-order-status {
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #0f172a;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #FFFFFF;
 }
 
 .te-order-time {
-  margin-left: auto;
   font-size: 0.75rem;
-  opacity: 0.8;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.te-order-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .te-order-restaurant {
-  font-size: 0.85rem;
-  opacity: 0.85;
+  font-family: var(--font-headings);
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-primary);
 }
 
 .te-order-items {
-  margin: 0.2rem 0;
-  padding-left: 1rem;
-  font-size: 0.8rem;
-  opacity: 0.9;
+  margin: var(--space-xs) 0;
+  padding-left: var(--space-lg);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.te-refund-status {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.te-refund-status--approved {
+  background-color: var(--success-light);
+  color: var(--success-text);
+  border-left: 3px solid var(--success);
+}
+
+.te-refund-status--rejected {
+  background-color: var(--error-light);
+  color: var(--error-text);
+  border-left: 3px solid var(--error);
+}
+
+.te-refund-status--pending {
+  background-color: var(--warning-light);
+  color: var(--warning-text);
+  border-left: 3px solid var(--warning);
+}
+
+.te-refund-status--resolved {
+  background-color: #F0F9FF;
+  color: #0369A1;
+  border-left: 3px solid #0284C7;
 }
 
 .te-order-footer {
-  margin-top: 0.4rem;
+  margin-top: auto;
   display: flex;
   justify-content: flex-end;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color);
 }
 
-.te-primary-btn,
-.te-secondary-btn {
-  border-radius: 999px;
-  padding: 0.35rem 0.9rem;
-  font-size: 0.8rem;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+.te-restaurant-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
 }
 
-.te-primary-btn {
-  background: linear-gradient(135deg, #0ea5e9, #22c55e);
-  color: #0b1120;
-  font-weight: 600;
-}
-
-.te-secondary-btn {
-  background: transparent;
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.6);
-}
-
-.te-primary-btn:hover,
-.te-secondary-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
+.te-menu-price {
+  font-family: var(--font-headings);
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--brand-orange);
 }
 
 .te-empty {
-  font-size: 0.85rem;
-  opacity: 0.8;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--space-xl) 0;
 }

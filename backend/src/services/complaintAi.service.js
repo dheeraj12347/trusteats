@@ -6,25 +6,95 @@ const path = require('path');
  */
 const ComplaintAiService = {
   // Helper to run Python Image Verification
-  async verifyImage(imagePath) {
+  async verifyImage(img1, img2, img3, challengeSequence, expectedFoodLabels) {
     return new Promise((resolve) => {
-      if (!imagePath) {
-        return resolve({ is_appropriate: true, is_ai_generated: false });
+      if (!img1 || !img2 || !img3) {
+        return resolve({
+          is_ai_generated: false,
+          is_appropriate: false,
+          confidence: 0.0,
+          reason: "Missing image paths for verification.",
+          decision: "REJECT",
+          suspicious_capture: true,
+          challenge_consistent: false,
+          checks: {
+            files_valid: false,
+            quality_ok: false,
+            screen_recap_suspected: false,
+            metadata_ok: false
+          }
+        });
       }
 
       const scriptPath = path.join(__dirname, '../ai/verify_image.py');
-      const py = spawn('python', [scriptPath, imagePath]);
+      const py = spawn('python', [scriptPath, img1, img2, img3, challengeSequence || '', expectedFoodLabels || '']);
       let dataString = "";
+
+      const timeout = setTimeout(() => {
+        py.kill();
+        resolve({
+          is_ai_generated: false,
+          is_appropriate: false,
+          confidence: 0.0,
+          reason: "Verification timed out.",
+          decision: "REJECT",
+          suspicious_capture: true,
+          challenge_consistent: false,
+          checks: {
+            files_valid: false,
+            quality_ok: false,
+            screen_recap_suspected: false,
+            metadata_ok: false
+          }
+        });
+      }, 45000);
 
       py.stdout.on('data', (data) => {
         dataString += data.toString();
       });
 
-      py.on('close', () => {
+      py.stderr.on('data', (data) => {
+        console.error("Python verify error:", data.toString());
+      });
+
+      py.on('close', (code) => {
+        clearTimeout(timeout);
+        if (code !== 0) {
+          return resolve({
+            is_ai_generated: false,
+            is_appropriate: false,
+            confidence: 0.0,
+            reason: `Verifier process exited with code ${code}`,
+            decision: "REJECT",
+            suspicious_capture: true,
+            challenge_consistent: false,
+            checks: {
+              files_valid: false,
+              quality_ok: false,
+              screen_recap_suspected: false,
+              metadata_ok: false
+            }
+          });
+        }
         try {
-          resolve(JSON.parse(dataString));
+          const parsed = JSON.parse(dataString.trim());
+          resolve(parsed);
         } catch (e) {
-          resolve({ is_appropriate: false, is_ai_generated: false });
+          resolve({
+            is_ai_generated: false,
+            is_appropriate: false,
+            confidence: 0.0,
+            reason: "Malformed verifier output.",
+            decision: "REJECT",
+            suspicious_capture: true,
+            challenge_consistent: false,
+            checks: {
+              files_valid: false,
+              quality_ok: false,
+              screen_recap_suspected: false,
+              metadata_ok: false
+            }
+          });
         }
       });
     });
@@ -34,18 +104,15 @@ const ComplaintAiService = {
    * Enhanced Scoring Function
    * Incorporates User Trust, Restaurant History, and Image Analysis
    */
-  async scoreComplaint({ complaint, user, order, restaurantStats, risk_score }) {
-    // 1. STRAIGHT AWAY REJECT: Image Verification
-    if (complaint.image_path) {
-      const imgCheck = await this.verifyImage(complaint.image_path);
-      if (imgCheck.is_ai_generated || !imgCheck.is_appropriate) {
-        return {
-          ai_score: 0,
-          ai_decision: 'REJECT',
-          reasons: ['invalid_or_ai_generated_image'],
-          image_is_ai: imgCheck.is_ai_generated ? 1 : 0,
-        };
-      }
+  async scoreComplaint({ complaint, user, order, restaurantStats, risk_score, image_is_ai }) {
+    // 1. STRAIGHT AWAY REJECT if image is AI-generated
+    if (image_is_ai === 1) {
+      return {
+        ai_score: 0,
+        ai_decision: 'REJECT',
+        reasons: ['invalid_or_ai_generated_image'],
+        image_is_ai: 1,
+      };
     }
 
     let score = 50;
@@ -122,3 +189,4 @@ const ComplaintAiService = {
 };
 
 module.exports = ComplaintAiService;
+

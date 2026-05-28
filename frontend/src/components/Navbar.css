@@ -1,107 +1,152 @@
 .te-navbar {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(90deg, #111827, #0f172a);
-  color: #f9fafb;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.6);
+  padding: 0.875rem 2rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .te-navbar-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-md);
+  text-decoration: none;
 }
 
 .te-logo-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 20%, #4ade80, #22c55e);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background-color: var(--brand-orange);
+  color: var(--bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-family: var(--font-headings);
+  font-weight: 800;
+  font-size: 1.125rem;
+  box-shadow: 0 4px 10px rgba(217, 59, 15, 0.2);
 }
 
 .te-logo-text {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-headings);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
 .te-navbar-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-xl);
+}
+
+.te-nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.te-nav-link {
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.te-nav-link:hover {
+  color: var(--brand-orange);
+  background-color: var(--brand-orange-light);
 }
 
 .te-user-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-sm);
+  border-left: 1px solid var(--border-color);
+  padding-left: var(--space-lg);
 }
 
 .te-user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background: #0ea5e9;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background-color: var(--brand-orange-light);
+  color: var(--brand-orange);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  font-family: var(--font-headings);
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1.5px solid rgba(217, 59, 15, 0.2);
 }
 
 .te-user-meta {
   display: flex;
   flex-direction: column;
-  font-size: 0.75rem;
-  line-height: 1.1;
 }
 
 .te-user-name {
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .te-user-role {
-  opacity: 0.7;
-  text-transform: lowercase;
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .te-logout-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
   font-size: 0.75rem;
-  font-weight: 500;
-  background: #f97316;
-  color: #111827;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  transition: all var(--transition-fast);
 }
 
 .te-logout-btn:hover {
-  background: #fb923c;
-  box-shadow: 0 8px 20px rgba(248, 113, 113, 0.3);
-  transform: translateY(-1px);
+  border-color: var(--error-border);
+  color: var(--error-text);
+  background-color: var(--error-light);
 }
 
-@media (max-width: 640px) {
-  .te-navbar {
-    padding: 0.6rem 0.9rem;
-  }
+.te-logout-btn:active {
+  transform: scale(0.96);
+}
 
+@media (max-width: 768px) {
+  .te-navbar {
+    padding: 0.75rem 1rem;
+  }
   .te-logo-text {
     display: none;
   }
-
   .te-user-meta {
     display: none;
+  }
+  .te-navbar-right {
+    gap: var(--space-md);
+  }
+  .te-user-info {
+    padding-left: var(--space-sm);
   }
 }

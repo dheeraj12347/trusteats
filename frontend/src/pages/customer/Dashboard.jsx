@@ -213,13 +213,14 @@ function CustomerDashboard() {
                   Track order
                 </button>
 
-                {o.status === 'DELIVERED' && (
+
+                {o.status === 'DELIVERED' && (!o.complaint_status || o.complaint_warning_state === 'WARNING_SENT') && (
                   <Link
                     to={`/complaint/${o.id}`}
                     className="te-secondary-btn"
                     style={{ marginLeft: '0.5rem' }}
                   >
-                    Report issue
+                    {o.complaint_warning_state === 'WARNING_SENT' ? 'Retry report' : 'Report issue'}
                   </Link>
                 )}
               </footer>

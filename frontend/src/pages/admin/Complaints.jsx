@@ -2,20 +2,11 @@ import React, { useEffect, useState } from 'react';
 
 const statusOptions = ['PENDING', 'AUTO_APPROVED', 'AUTO_REJECTED', 'ESCALATED', 'RESOLVED'];
 
-const statusClasses = (status) => {
-  switch (status) {
-    case 'PENDING':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-    case 'AUTO_APPROVED':
-    case 'RESOLVED':
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-    case 'AUTO_REJECTED':
-      return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-    case 'ESCALATED':
-      return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
-    default:
-      return 'bg-slate-800 text-slate-200 border-slate-600';
-  }
+const statusBadgeClass = (status) => {
+  if (status === 'AUTO_APPROVED' || status === 'RESOLVED') return 'te-badge--success';
+  if (status === 'AUTO_REJECTED') return 'te-badge--error';
+  if (status === 'ESCALATED' || status === 'PENDING') return 'te-badge--warning';
+  return 'te-badge--info';
 };
 
 const ComplaintsAdmin = () => {
@@ -85,87 +76,157 @@ const ComplaintsAdmin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-        <p className="text-sm text-slate-300">Loading complaints...</p>
+      <div className="te-page page-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div className="te-spinner"></div>
+        <p style={{ marginTop: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Loading complaints...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-4 py-6">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-4">All complaints</h1>
+    <div className="te-page page-fade-in">
+      <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem', marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-headings)' }}>Admin Control Panel</h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+          Manage customer disputes, view AI verification heuristic scores, and override complaint statuses.
+        </p>
+      </div>
 
-        {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
+      {error && (
+        <div className="te-alert te-alert--error" style={{ marginBottom: '1.5rem' }}>
+          <span>⚠️</span>
+          <span>{error}</span>
+        </div>
+      )}
 
-        {complaints.length === 0 ? (
-          <p className="text-sm text-slate-400">No complaints found.</p>
-        ) : (
-          <div className="space-y-3">
-            {complaints.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-xl border border-slate-800 bg-slate-900/70 p-4"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="text-sm text-slate-300">
-                      Order <span className="font-medium">#{c.order_id}</span> · Customer:{' '}
-                      <span className="font-medium">{c.customer_name || c.customer_id}</span>
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      Type: <span className="text-slate-200">{c.type}</span>
-                    </p>
-                    <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-200">
-                      {complaintsCountLabel(c.complaints_count)}
-                    </span>
-                  </div>
-                  <span
-                    className={
-                      'text-xs px-2 py-1 rounded-full border ' +
-                      statusClasses(c.status)
-                    }
-                  >
-                    {c.status}
+      {complaints.length === 0 ? (
+        <div className="te-empty-state">
+          <span className="te-empty-icon">📂</span>
+          <p>No complaints found in the system.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {complaints.map((c) => (
+            <div
+              key={c.id}
+              className="te-card te-card--hover"
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                    Order <span style={{ color: 'var(--brand-orange)' }}>#{c.order_id}</span> · Customer:{' '}
+                    <span style={{ color: 'var(--text-secondary)' }}>{c.customer_name || c.customer_id}</span>
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    Type: <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{c.type.replace(/_/g, ' ')}</span>
+                  </p>
+                  <span className="te-badge te-badge--info" style={{ marginTop: '6px', fontSize: '0.7rem' }}>
+                    {complaintsCountLabel(c.complaints_count)}
                   </span>
                 </div>
-
-                {c.description && (
-                  <p className="text-xs text-slate-400 mb-1">{c.description}</p>
-                )}
-
-                {c.ai_score != null && (
-                  <p className="text-[11px] text-slate-400 mb-2">
-                    AI decision: {c.ai_score}/100
-                    {c.decision_reason ? ` · ${c.decision_reason}` : ''}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {statusOptions.map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(c.id, status)}
-                      disabled={updatingId === c.id}
-                      className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-colors ${
-                        c.status === status
-                          ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                          : 'bg-slate-900 text-slate-200 border-slate-700 hover:border-emerald-400'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-
-                <p className="text-[11px] text-slate-500 mt-2">
-                  Created at: {new Date(c.created_at).toLocaleString()}
-                </p>
+                <span className={`te-badge ${statusBadgeClass(c.status)}`}>
+                  {c.status}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              {c.description && (
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontStyle: 'italic', paddingLeft: '8px', borderLeft: '2px solid var(--border-color)' }}>
+                  "{c.description}"
+                </div>
+              )}
+
+              {c.verification_decision && (
+                <div style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  padding: '12px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '0.8125rem'
+                }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
+                    Evidence Verification Details
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px 16px' }}>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Decision: <span style={{ fontWeight: 700, color: c.verification_decision === 'PASS_TO_TRUST_SCORE' ? 'var(--success)' : 'var(--error)' }}>{c.verification_decision}</span>
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Confidence: <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.verification_confidence != null ? `${(c.verification_confidence * 100).toFixed(0)}%` : 'N/A'}</span>
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Suspicious Capture: <span style={{ fontWeight: 700, color: c.suspicious_capture ? 'var(--error)' : 'var(--success)' }}>{c.suspicious_capture ? 'YES' : 'NO'}</span>
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Image Status (AI): <span style={{ fontWeight: 700, color: c.image_is_ai ? 'var(--error)' : 'var(--success)' }}>{c.image_is_ai ? 'FAKE' : 'AUTHENTIC'}</span>
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Trust Score: <span style={{ fontWeight: 700, color: 'var(--success)' }}>{c.trust_score != null ? `${c.trust_score}/100` : 'N/A'}</span>
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Challenge Completed: <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{c.challenge_completed ? 'YES' : 'NO'}</span>
+                    </p>
+                  </div>
+                  {c.verification_reason && (
+                    <p style={{ marginTop: '8px', fontStyle: 'italic', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
+                      Reason: "{c.verification_reason}"
+                    </p>
+                  )}
+                  {c.challenge_sequence && (
+                    <p style={{ marginTop: '4px', fontSize: '0.7rem', color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
+                      Sequence: {c.challenge_sequence}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {!c.verification_decision && c.ai_score != null && (
+                <div style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-color)',
+                  fontSize: '0.8125rem',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <strong>AI score:</strong> {c.ai_score}/100 {c.decision_reason ? ` · ${c.decision_reason}` : ''}
+                </div>
+              )}
+
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '4px' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                  Update Decision Status
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {statusOptions.map((status) => {
+                    const isActive = c.status === status;
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => handleStatusChange(c.id, status)}
+                        disabled={updatingId === c.id}
+                        className="te-chip-btn"
+                        style={isActive ? {
+                          backgroundColor: 'var(--brand-orange-light)',
+                          borderColor: 'var(--brand-orange)',
+                          color: 'var(--brand-orange)',
+                          fontWeight: 700
+                        } : {}}
+                      >
+                        {status.replace(/_/g, ' ')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                Filed: {new Date(c.created_at).toLocaleString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

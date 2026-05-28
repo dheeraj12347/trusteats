@@ -7,12 +7,12 @@ const upload = require('../utils/uploader');
 
 const router = express.Router();
 
-// Customer: create complaint (with optional image)
+// Customer: create complaint (with live camera images)
 router.post(
   '/',
   authMiddleware,
   allowRoles('CUSTOMER'),
-  upload.single('image'),
+  upload.array('images', 3),
   ComplaintController.create
 );
 
